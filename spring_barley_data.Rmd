@@ -85,7 +85,6 @@ glyphosate_barley_osteoporosis +
 ```
 
 ```{r missing_osteoporosis_data}
-#finding areas of the highest ratios
 glyphosate_barley_osteoporosis_ratio <- osteoporosis_datazones %>% 
   st_drop_geometry() %>% 
   select(ONS_2010, Rate_Osteoporosis) %>% 
@@ -95,9 +94,8 @@ glyphosate_barley_osteoporosis_ratio <- osteoporosis_datazones %>%
            log10((Rate_Osteoporosis/pesticide_applied_kilos_each_region) +1)) %>%
   arrange(desc(ratio_pesticide_osteoporosis))
 
-#finding overlap to see if osteoporosis data is limiting
-overlap_glyphosate
-glyphosate_barley %>% 
+
+overlap_glyphosate <- glyphosate_barley %>% 
   ggplot() +
   geom_sf(aes(geometry = geometry), fill = "lightgrey", colour = NA, data = scotland_outline) +
   geom_sf(aes(geometry = geometry, fill = pesticide_applied_kilos_each_region), colour = NA, alpha = 0.4) +
@@ -108,7 +106,7 @@ glyphosate_barley %>%
   scale_fill_viridis_c(na.value = NA) +
     #labs(fill = NULL,
          #colour = NULL) +
-  coord_sf(datum = NULL) +
+  #coord_sf(datum = NULL) +
   labs(fill = "Glyphosate (kg)") +
   theme_void()
 
