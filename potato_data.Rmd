@@ -1,0 +1,130 @@
+---
+title: "potato_data"
+output: html_document
+---
+
+```{r}
+source("functions.R")
+```
+
+```{r ware_potatoes}
+potato_data <- preparing_agri_for_plotting(ware_potato_data_2021)
+
+#plotting areas of ware potato farming 
+plotting_agricultural_data(potato_data) +
+  scale_fill_viridis_c(na.value = "lightgrey") +
+  labs(fill = "Area (hectares)")
+
+```
+
+```{r missing_data}
+missing_ONS_potato <- finding_missing_ONS(ware_potato_data_2021)
+
+
+plotting_agrcultural_w_missing_ONS(potato_data, missing_ONS_potato) +
+  scale_fill_viridis_c(na.value = "lightgrey") +
+  labs(fill = "Area (hectares)")
+```
+
+
+```{r potato_mancozeb}
+
+mancozeb_potato <- finding_pesticide_spray(ware_potato_data_2021, 
+                                           potato_mancozeb_pusstats)
+
+#plotting mancozeb sprayed
+mancozeb_potato_plot <- plotting_pesticide_spray(mancozeb_potato) +
+  scale_fill_viridis_c(na.value = "lightgrey") +
+  theme_void() +
+  labs(fill = "Mancozeb sprayed (kg)",
+       caption = "115427kg mancozeb sprayed") 
+```
+
+```{r mancozeb_osteoporosis}
+#plotting ratios of osteoporosis to mancozeb ratios
+osteoporosis_datazones %>% 
+  st_drop_geometry() %>% 
+  select(ONS_2010, Rate_Osteoporosis) %>% 
+  full_join(mancozeb_potato, join_by(ONS_2010 == ONS_2010), relationship = "many-to-many") %>%
+  mutate(ratio_pesticide_osteoporosis = (Rate_Osteoporosis/pesticide_applied_kilos_each_region)) %>% 
+  mutate(ratio_pesticide_osteoporosis_logged =
+           log10((Rate_Osteoporosis/pesticide_applied_kilos_each_region) +1)) %>% 
+  ggplot() +
+  geom_sf(aes(geometry = geometry, fill = ratio_pesticide_osteoporosis_logged), colour = NA) +
+  scale_fill_viridis_c("log10((Osteoporosis:Mancozeb) +1) ratio", na.value = "lightgrey") +
+  labs(caption = "115427kg Mancozeb") +
+  theme_void() +
+  coord_sf(datum = NA)
+
+
+```
+
+```{r missing_osteoporosis_data}
+#finding areas of the highest ratios
+mancozeb_potato_osteoporosis_ratio <- osteoporosis_datazones %>% 
+  st_drop_geometry() %>% 
+  select(ONS_2010, Rate_Osteoporosis) %>% 
+  full_join(mancozeb_potato, join_by(ONS_2010 == ONS_2010), relationship = "many-to-many") %>%
+  mutate(ratio_pesticide_osteoporosis = (Rate_Osteoporosis/pesticide_applied_kilos_each_region)) %>% 
+  mutate(ratio_pesticide_osteoporosis_logged =
+           log10((Rate_Osteoporosis/pesticide_applied_kilos_each_region) +1)) %>%
+  arrange(desc(ratio_pesticide_osteoporosis_logged))
+
+#finding overlap to see if osteoporosis data is limiting
+mancozeb_overlap <- mancozeb_potato %>% 
+  ggplot() +
+  geom_sf(aes(geometry = geometry), fill = "lightgrey", colour = NA, data = scotland_outline) +
+  geom_sf(aes(geometry = geometry, fill = pesticide_applied_kilos_each_region), colour = NA, alpha = 0.4) +
+  geom_sf(aes(geometry = geometry, fill = ratio_pesticide_osteoporosis_logged),
+          colour = NA,
+          data = mancozeb_potato_osteoporosis_ratio,
+          alpha = 0.8) +
+  scale_fill_viridis_c(na.value = NA) +
+    #labs(fill = NULL,
+         #colour = NULL) +
+  coord_sf(datum = NULL) +
+  labs(fill = "Mancozeb (kg") +
+  theme_void()
+
+
+mancozeb_overlap +
+    geom_rect(xmin= 2.9e+05,
+            xmax = 3.8e+05,
+            ymin = 690000, 
+            ymax = 770000,
+            fill = NA,
+            colour = "red",
+            linewidth = 0.75)
+
+
+mancozeb_potato_plot +
+  coord_sf(xlim = c(2.9e+05, 3.8e+05), ylim = c(690000, 770000), 
+             datum = NULL,
+             expand = FALSE) +
+    theme(legend.position = "none") +
+    labs(title = "Mancozeb data",
+         subtitle = NULL)
+
+
+```
+
+
+```{r descriptive_statistics}
+sum(ware_potato_data_2021$agcval)
+
+sum(missing_ONS_potato$agcval)
+
+mean(potato_data$crop_area, na.rm = TRUE)
+
+sd(potato_data$crop_area, na.rm = TRUE)
+
+mean(mancozeb_potato$pesticide_applied_kilos_each_region, na.rm = TRUE)
+
+sd(mancozeb_potato$pesticide_applied_kilos_each_region, na.rm = TRUE)
+
+median(mancozeb_potato_osteoporosis_ratio$ratio_pesticide_osteoporosis_logged, na.rm = TRUE)
+
+mean(mancozeb_potato_osteoporosis_ratio$ratio_pesticide_osteoporosis_logged, na.rm = TRUE)
+
+sd(mancozeb_potato_osteoporosis_ratio$ratio_pesticide_osteoporosis_logged, na.rm = TRUE)
+```

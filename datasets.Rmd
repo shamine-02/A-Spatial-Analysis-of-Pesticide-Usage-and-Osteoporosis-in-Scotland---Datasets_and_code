@@ -1,0 +1,55 @@
+---
+title: "datasets"
+output: html_document
+---
+
+```{r}
+source("functions.R")
+
+library(dplyr)
+library(sf)
+library(here)
+library(ggplot2)
+library(tidyr)
+library(patchwork)
+library(stringr)
+```
+
+
+```{r pesticide_data}
+potato_mancozeb_pusstats <- read.csv(here("data", "potato_mancozeb_pusstats.csv")) %>% 
+  select(6) %>% 
+  str_replace_all("[[:punct:]]", "") %>% 
+  as.numeric()
+
+  
+cereals_glyphosate_pusstats <- read.csv(here("data", "cereals_glyphosate_pusstats.csv")) %>% 
+  select(6) %>% 
+  str_replace_all("[[:punct:]]", "") %>% 
+  as.numeric()
+```
+
+```{r crop_data}
+ware_potato_data_2021 <- st_read(here("data", "Download_ware_potato_2021_2964643" ,"scotland-agcensus-2021_2km-grid_6367151", "crops-and-fallow", "sc-2021-c170-2km-mainly-ware-potatoes.shp"))
+
+spring_barley_2021 <- st_read(here("data", "Download_spring_barley_2021_2951887", "scotland-agcensus-2021_2km-grid_6344883", "crops-and-fallow", "sc-2021-c10-2km-spring-barley-for-combining.shp"))
+```
+
+```{r health_data}
+
+gp_data_by_gp <- read.csv(here("data", "diseaseprevalenceingeneralpractice_practice_total(DP_Practice_total).csv"))
+
+gp_location_data <- st_read(here("data", "GP_Practices_-_Scotland", "pub_gpprac.shp"))
+
+gp_list_2022 <- read.csv("https://www.opendata.nhs.scot/dataset/f23655c3-6e23-4103-a511-a80d998adb90/resource/8175c9ac-6953-4636-b151-f3946ef0fb80/download/practice_contactdetails_apr2022-open-data.csv")
+
+
+```
+
+```{r boundary_data}
+
+boundary_data <- st_read(here("data", "3rd_Review_1999_2007_All_Scotland_wards_1758892794", "All_Scotland_wards_3rd.shp"))
+
+scotland_outline <- st_union(boundary_data)
+```
+

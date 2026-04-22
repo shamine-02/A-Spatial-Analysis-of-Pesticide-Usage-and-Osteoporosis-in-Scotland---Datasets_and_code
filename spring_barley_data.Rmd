@@ -1,0 +1,153 @@
+---
+title: "spring_barley"
+output: html_document
+---
+
+```{r spring_barley}
+
+barley_data <- preparing_agri_for_plotting(spring_barley_2021)
+
+#areas of spring barley farming
+barley <- plotting_agricultural_data(barley_data) +
+  scale_fill_viridis_c(na.value = "lightgrey") +
+  labs(fill = "Area (hectares)")
+
+```
+
+```{r missing_data}
+
+missing_ONS_barley <- finding_missing_ONS(spring_barley_2021)
+
+plotting_agrcultural_w_missing_ONS(barley_data, missing_ONS_barley) +
+  scale_fill_viridis_c(na.value = "lightgrey") +
+  labs(fill = "Area (hectares)",
+       colour = "Missing ONS values") +
+  theme(plot.subtitle = element_text(colour = "coral"))
+```
+
+```{r barley_glyphosate}
+
+glyphosate_barley <- finding_pesticide_spray(spring_barley_2021, 
+                                             cereals_glyphosate_pusstats)
+  
+
+glyphosate_barley_map <- plotting_pesticide_spray(glyphosate_barley) +
+  theme_void() +
+  scale_fill_viridis_c(na.value = "lightgrey") +
+  labs(fill = "Glyphosate sprayed (kg)",
+       caption = "71559kg glyphosate sprayed") 
+
+
+```
+
+```{r glyphosate_osteoporosis}
+#log10(ratio) osteoporosis:pesticide ratio to minimise effect of the high value
+
+glyphosate_barley_osteoporosis
+osteoporosis_datazones %>% 
+  st_drop_geometry() %>% 
+  select(ONS_2010, Rate_Osteoporosis) %>% 
+  full_join(glyphosate_barley, join_by(ONS_2010 == ONS_2010), relationship = "many-to-many") %>%
+  mutate(ratio_pesticide_osteoporosis = (Rate_Osteoporosis/pesticide_applied_kilos_each_region)) %>% 
+  mutate(ratio_pesticide_osteoporosis_logged =
+           log10((Rate_Osteoporosis/pesticide_applied_kilos_each_region) +1)) %>%
+  ggplot() +
+  geom_sf(aes(geometry = geometry, fill = ratio_pesticide_osteoporosis_logged), colour = NA) +
+
+  scale_fill_viridis_c(na.value = "lightgrey") +
+  theme_void() +
+  coord_sf(datum = NA) +
+  labs(fill = "log10((Osteoporosis:Glyphosate ratio) +1)",
+       caption = "71559kg Glyphosate")
+
+
+glyphosate_barley_osteoporosis +
+  geom_rect(xmin= 2e+05,
+            xmax = 3e+05,
+            ymin = 627000, 
+            ymax = 690001,
+            fill = NA,
+            colour = "red",
+            linewidth = 0.75)
+
+
+
+glyphosate_barley_osteoporosis +
+    coord_sf(xlim = c(2e+05, 3e+05), ylim = c(627000, 690001), 
+             datum = NULL, 
+             expand = FALSE) +
+    theme(legend.position = "none") +
+    labs(title = NULL,
+         subtitle = NULL)
+
+
+
+```
+
+```{r missing_osteoporosis_data}
+#finding areas of the highest ratios
+glyphosate_barley_osteoporosis_ratio <- osteoporosis_datazones %>% 
+  st_drop_geometry() %>% 
+  select(ONS_2010, Rate_Osteoporosis) %>% 
+  full_join(glyphosate_barley, join_by(ONS_2010 == ONS_2010), relationship = "many-to-many") %>%
+  mutate(ratio_pesticide_osteoporosis = (Rate_Osteoporosis/pesticide_applied_kilos_each_region)) %>% 
+  mutate(ratio_pesticide_osteoporosis_logged =
+           log10((Rate_Osteoporosis/pesticide_applied_kilos_each_region) +1)) %>%
+  arrange(desc(ratio_pesticide_osteoporosis))
+
+#finding overlap to see if osteoporosis data is limiting
+overlap_glyphosate
+glyphosate_barley %>% 
+  ggplot() +
+  geom_sf(aes(geometry = geometry), fill = "lightgrey", colour = NA, data = scotland_outline) +
+  geom_sf(aes(geometry = geometry, fill = pesticide_applied_kilos_each_region), colour = NA, alpha = 0.4) +
+  geom_sf(aes(geometry = geometry, fill = ratio_pesticide_osteoporosis_logged),
+          colour = NA,
+          data = glyphosate_barley_osteoporosis_ratio,
+          alpha = 0.8) +
+  scale_fill_viridis_c(na.value = NA) +
+    #labs(fill = NULL,
+         #colour = NULL) +
+  coord_sf(datum = NULL) +
+  labs(fill = "Glyphosate (kg)") +
+  theme_void()
+
+
+overlap_glyphosate +
+    geom_rect(xmin= 3.25e+05,
+            xmax = 4.25e+05,
+            ymin = 800000, 
+            ymax = 880000,
+            fill = NA,
+            colour = "red",
+            linewidth = 0.75)
+
+
+glyphosate_barley_map +
+  coord_sf(xlim = c(3.25e+05, 4.25e+05), ylim = c(800000, 880000), 
+             datum = NULL,
+             expand = FALSE) +
+    theme(legend.position = "none") +
+    labs(title = "Glyphosate data",
+         subtitle = NULL)
+
+```
+
+```{r descriptive_statistics}
+sum(spring_barley_2021$agcval) #total spring barley grown
+
+sum(missing_ONS_barley$agcval)
+
+mean(barley_data$crop_area, na.rm = TRUE)
+
+sd(barley_data$crop_area, na.rm = TRUE)
+
+mean(glyphosate_barley$pesticide_applied_kilos_each_region, na.rm = TRUE)
+
+sd(glyphosate_barley$pesticide_applied_kilos_each_region, na.rm = TRUE)
+
+mean(glyphosate_barley_osteoporosis_ratio$ratio_pesticide_osteoporosis_logged, na.rm = TRUE)
+
+sd(glyphosate_barley_osteoporosis_ratio$ratio_pesticide_osteoporosis_logged, na.rm = TRUE)
+
+```

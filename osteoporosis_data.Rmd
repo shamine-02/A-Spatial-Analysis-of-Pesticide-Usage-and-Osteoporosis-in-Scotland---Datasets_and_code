@@ -1,0 +1,186 @@
+---
+title: "osteoporosis_data"
+output: html_document
+---
+
+```{r finding_merged_practices}
+
+# filtering osteoporosis data for 2022 (both sexes) and merged practices
+osteoporosis_2022_data_by_gp_merged_gps <- gp_data_by_gp %>% 
+  select(c(GPPractice.Area, Year, Age, Rate_Osteoporosis, PracticeCode, PatientCount_Osteoporosis)) %>% 
+  filter(Year == "2022", # NO DATA FOR 2020
+         Age == "All") %>% 
+  filter(str_detect(PracticeCode, " & ")) %>%  #13 merged practices 
+  separate_longer_delim(PracticeCode, delim = " & ") %>% 
+  mutate(num_PracticeCode = as.integer(PracticeCode))
+
+
+#joining merged GP locations with prevalence of osteoporosis at each GP to see if they have different point data
+osteoporosis_gp_testing <- osteoporosis_2022_data_by_gp_merged_gps %>% 
+  left_join(gp_location_data, join_by(num_PracticeCode == prac_code)) # same point data, so only keep first practice code
+```
+
+```{r preparing_osteoporosis_data}
+# filtering osteoporosis data for 2022 (both sexes), dealing with merged practices
+osteoporosis_2022_data_by_gp <- gp_data_by_gp %>% 
+  select(c(GPPractice.Area, Year, Age, Rate_Osteoporosis, PracticeCode, PatientCount_Osteoporosis)) %>% 
+  filter(Year == "2022", # NO DATA FOR 2020
+         Age == "All") %>% 
+  separate_longer_delim(PracticeCode, delim = " & ") %>% 
+  group_by(GPPractice.Area) %>% 
+  filter(row_number() == 1) %>%  #only keeping first practice code for merged practices
+  #filter(str_detect(PracticeCode, " & ")) #%>%  #checking if merged practices have been removed
+  mutate(num_PracticeCode = as.integer(PracticeCode)) %>% 
+  #joining GP locations with prevalence of osteoporosis at each GP
+  full_join(gp_location_data, join_by(num_PracticeCode == prac_code)) 
+
+
+osteoporosis_sf_filtered <- osteoporosis_2022_data_by_gp %>% # some of the gp's don't have points - could manually add in longitudes and latitudes???
+  filter(!is.na(Rate_Osteoporosis), #some gp's do not submit data
+         !is.na(postcode)) %>% #some gps were not created yet in 2020 (don't have point data)
+  #convert to sf object + joining w/ GP osteoporosis data with datazone shapefile
+  st_sf() 
+
+osteoporosis_datazones <- st_join(boundary_data, osteoporosis_sf_filtered, join = st_intersects)
+
+#finding data with NAs
+finding_NAs_spatial <- osteoporosis_2022_data_by_gp %>%
+  filter(is.na(postcode))
+
+finding_NAs_osteoporosis <- osteoporosis_2022_data_by_gp %>%
+  filter(is.na(Rate_Osteoporosis))
+
+st_crs(boundary_data) == st_crs(gp_location_data)
+
+#plotting osteoporosis rates in Scotland 2022
+osteoporosis_rates <- osteoporosis_datazones %>% 
+  st_drop_geometry() %>% 
+  select(ONS_2010, Rate_Osteoporosis) %>% 
+  left_join(boundary_data, join_by(ONS_2010 == ONS_2010)) %>% 
+  #filter(!is.na(Rate_Osteoporosis)) %>% 
+  group_by(ONS_2010) %>% 
+  summarise(ONS_2010, geometry, average_osteoporosis_rate = mean(Rate_Osteoporosis, na.rm = TRUE)) %>% 
+  ggplot() +
+  geom_sf(aes(geometry = geometry, fill = average_osteoporosis_rate), colour = NA) + # gives borders same colour as rate
+  scale_fill_viridis_c(na.value = "white") +
+  labs(
+    #title = "Osteoporosis rates in Scotland 2022",
+       fill = "Osteoporosis rates") +
+  coord_sf(datum = NULL) #+
+
+```
+
+
+```{r zoomed_osteoporosis}
+
+#creating zoomed in area with high rates of osteoporosis
+osteoporosis_subset <- osteoporosis_rates +
+  geom_rect(xmin= 2.2e+05,
+            xmax = 2.8e+05,
+            ymin = 650000, 
+            ymax = 680000,
+            fill = NA,
+            colour = "red",
+            linewidth = 0.75) +
+  geom_rect(xmin= 3.1e+05,
+            xmax = 3.45e+05,
+            ymin = 650000, 
+            ymax = 690000,
+            fill = NA,
+            colour = "red",
+            linewidth = 0.75)
+
+
+zoomed1 <- osteoporosis_subset +
+    coord_sf(xlim = c(2.200001e+05, 2.800001e+05), ylim = c(650001, 680001), 
+             datum = NULL, 
+             expand = FALSE) +
+    theme(legend.position = "none") +
+    labs(title = NULL,
+         subtitle = NULL)
+
+
+zoomed2 <- osteoporosis_subset +
+    coord_sf(xlim = c(3.100001e+05, 3.450001e+05), ylim = c(650001, 690001), 
+             datum = NULL,
+             expand = FALSE) +
+    theme(legend.position = "none") +
+    labs(title = NULL,
+         subtitle = NULL)
+
+#zoomed areas of high osteoporoosis:pesticide areas
+osteoporosis_rates +
+  coord_sf(xlim = c(3.25e+05, 4.25e+05), ylim = c(800000, 880000), 
+             datum = NULL,
+             expand = FALSE) +
+    theme(legend.position = "none") +
+    labs(title = "Osteoporosis data",
+         subtitle = NULL)
+
+
+osteoporosis_rates +
+  coord_sf(xlim = c(2.9e+05, 3.8e+05), ylim = c(690000, 770000), 
+             datum = NULL,
+             expand = FALSE) +
+    theme(legend.position = "none") +
+    labs(title = "Osteoporosis data",
+         subtitle = NULL)
+
+```
+
+```{r descriptive stats}
+
+average_osteoporosis_rates_over_all_regions <- osteoporosis_datazones %>% 
+  st_drop_geometry() %>% 
+  select(ONS_2010, Rate_Osteoporosis) %>% 
+  left_join(boundary_data, join_by(ONS_2010 == ONS_2010)) %>% 
+  #filter(!is.na(Rate_Osteoporosis)) %>% 
+  group_by(ONS_2010) %>% 
+  summarise(ONS_2010, geometry, Council, Name, average_osteoporosis_rate = mean(Rate_Osteoporosis, na.rm = TRUE)) %>%
+  filter(row_number() == 1) %>% 
+  filter(!is.nan(average_osteoporosis_rate)) %>% 
+  arrange(desc(average_osteoporosis_rate))
+
+
+average_osteoporosis_rates_per_gp <- osteoporosis_datazones %>% 
+  st_drop_geometry() %>% 
+  select(ONS_2010, Council, Name, Rate_Osteoporosis) %>% 
+  filter(!is.na(Rate_Osteoporosis)) %>% 
+  mutate(sum = sum(Rate_Osteoporosis))
+
+mean(average_osteoporosis_rates_over_all_regions$average_osteoporosis_rate)
+
+sd(average_osteoporosis_rates_over_all_regions$average_osteoporosis_rate)
+
+range(average_osteoporosis_rates_over_all_regions$average_osteoporosis_rate)
+
+
+
+mean(average_osteoporosis_rates_per_gp$Rate_Osteoporosis)
+
+sd(average_osteoporosis_rates_per_gp$Rate_Osteoporosis)
+
+range(average_osteoporosis_rates_per_gp$Rate_Osteoporosis)
+
+sum(finding_NAs_spatial$PatientCount_Osteoporosis)
+```
+
+```{r checking_data_completeness}
+gp_practices_apr_2022 <- read.csv("https://www.opendata.nhs.scot/dataset/f23655c3-6e23-4103-a511-a80d998adb90/resource/8175c9ac-6953-4636-b151-f3946ef0fb80/download/practice_contactdetails_apr2022-open-data.csv")
+
+  
+  
+finding <- gp_data_by_gp %>% 
+  select(c(GPPractice.Area, Year, Age, Rate_Osteoporosis, PracticeCode, PatientCount_Osteoporosis)) %>% 
+  filter(Year == "2022", # NO DATA FOR 2020
+         Age == "All") %>% 
+  separate_longer_delim(PracticeCode, delim = " & ") %>% 
+  group_by(GPPractice.Area) %>% 
+  filter(row_number() == 1) %>% 
+  mutate(num_PracticeCode = as.integer(PracticeCode)) %>% 
+  right_join(gp_practices_apr_2022, join_by(num_PracticeCode == PracticeCode)) %>% 
+  filter(is.na(Rate_Osteoporosis))
+
+
+```
+
