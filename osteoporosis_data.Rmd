@@ -66,7 +66,8 @@ osteoporosis_rates <- osteoporosis_datazones %>%
   labs(
     #title = "Osteoporosis rates in Scotland 2022",
        fill = "Osteoporosis rates") +
-  coord_sf(datum = NULL) #+
+  coord_sf(datum = NULL) +
+  theme(legend.position.inside = "top")
 
 ```
 
@@ -166,10 +167,6 @@ sum(finding_NAs_spatial$PatientCount_Osteoporosis)
 ```
 
 ```{r checking_data_completeness}
-gp_practices_apr_2022 <- read.csv("https://www.opendata.nhs.scot/dataset/f23655c3-6e23-4103-a511-a80d998adb90/resource/8175c9ac-6953-4636-b151-f3946ef0fb80/download/practice_contactdetails_apr2022-open-data.csv")
-
-  
-  
 finding <- gp_data_by_gp %>% 
   select(c(GPPractice.Area, Year, Age, Rate_Osteoporosis, PracticeCode, PatientCount_Osteoporosis)) %>% 
   filter(Year == "2022", # NO DATA FOR 2020
@@ -180,7 +177,6 @@ finding <- gp_data_by_gp %>%
   mutate(num_PracticeCode = as.integer(PracticeCode)) %>% 
   right_join(gp_practices_apr_2022, join_by(num_PracticeCode == PracticeCode)) %>% 
   filter(is.na(Rate_Osteoporosis))
-
 
 ```
 

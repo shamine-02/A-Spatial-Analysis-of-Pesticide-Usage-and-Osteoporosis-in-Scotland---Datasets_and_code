@@ -41,7 +41,7 @@ gp_data_by_gp <- read.csv(here("data", "diseaseprevalenceingeneralpractice_pract
 
 gp_location_data <- st_read(here("data", "GP_Practices_-_Scotland", "pub_gpprac.shp"))
 
-gp_list_2022 <- read.csv("https://www.opendata.nhs.scot/dataset/f23655c3-6e23-4103-a511-a80d998adb90/resource/8175c9ac-6953-4636-b151-f3946ef0fb80/download/practice_contactdetails_apr2022-open-data.csv")
+gp_practices_apr_2022 <- read.csv("https://www.opendata.nhs.scot/dataset/f23655c3-6e23-4103-a511-a80d998adb90/resource/8175c9ac-6953-4636-b151-f3946ef0fb80/download/practice_contactdetails_apr2022-open-data.csv")
 
 
 ```

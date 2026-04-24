@@ -144,8 +144,8 @@ mean(glyphosate_barley$pesticide_applied_kilos_each_region, na.rm = TRUE)
 
 sd(glyphosate_barley$pesticide_applied_kilos_each_region, na.rm = TRUE)
 
-mean(glyphosate_barley_osteoporosis_ratio$ratio_pesticide_osteoporosis_logged, na.rm = TRUE)
+median(glyphosate_barley_osteoporosis_ratio$ratio_pesticide_osteoporosis_logged, na.rm = TRUE)
 
-sd(glyphosate_barley_osteoporosis_ratio$ratio_pesticide_osteoporosis_logged, na.rm = TRUE)
+IQR(glyphosate_barley_osteoporosis_ratio$ratio_pesticide_osteoporosis_logged, na.rm = TRUE)
 
 ```

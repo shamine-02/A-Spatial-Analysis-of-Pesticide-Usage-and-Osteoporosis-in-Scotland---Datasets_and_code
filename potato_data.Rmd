@@ -124,7 +124,5 @@ sd(mancozeb_potato$pesticide_applied_kilos_each_region, na.rm = TRUE)
 
 median(mancozeb_potato_osteoporosis_ratio$ratio_pesticide_osteoporosis_logged, na.rm = TRUE)
 
-mean(mancozeb_potato_osteoporosis_ratio$ratio_pesticide_osteoporosis_logged, na.rm = TRUE)
-
-sd(mancozeb_potato_osteoporosis_ratio$ratio_pesticide_osteoporosis_logged, na.rm = TRUE)
+IQR(mancozeb_potato_osteoporosis_ratio$ratio_pesticide_osteoporosis_logged, na.rm = TRUE)
 ```
